@@ -1,0 +1,174 @@
+package com.mycompany.game02;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.Random;
+import java.util.HashSet;
+
+public class Game02 extends JFrame {
+
+    private int level = 1;
+    private double answer = 0;
+    private Random random = new Random();
+    private String[] mathLevels = {
+            "Addition", "Subtraction", "Multiplication", "Division",
+            "Multiplication + Addition", "Power of Sum", "Advanced Addition",
+            "Intermediate Multiplication", "Complex Division", "Math Challenge"
+    };
+    private String[] scienceLevels = {
+            "Velocity", "Atomic Mass", "Light Distance", "Acceleration",
+            "Physics Level 5", "Chemistry Level 6", "Physics Level 7",
+            "Science Level 8", "Advanced Physics", "Science Challenge"
+    };
+
+    private JLabel levelLabel = new JLabel();
+    private JTextArea questionArea = new JTextArea(3, 30);
+    private JButton[] options = new JButton[4];
+    private JLabel feedbackLabel = new JLabel();
+
+    private boolean isMath = true; // true = math, false = science
+
+    public Game02() {
+        setTitle("Math & Science Quiz");
+        setSize(500, 350);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setLayout(new FlowLayout());
+
+        // Ask user which track to play
+        Object[] choices = {"Math", "Science"};
+        String track = (String) JOptionPane.showInputDialog(
+                null,
+                "Choose your track:",
+                "Select Track",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                choices,
+                choices[0]
+        );
+
+        if (track == null) System.exit(0); // user closed dialog
+        isMath = track.equals("Math");
+
+        questionArea.setLineWrap(true);
+        questionArea.setWrapStyleWord(true);
+        questionArea.setEditable(false);
+
+        add(levelLabel);
+        add(questionArea);
+
+        // Create buttons for options
+        for (int i = 0; i < 4; i++) {
+            options[i] = new JButton();
+            options[i].setPreferredSize(new Dimension(220, 30));
+            options[i].addActionListener(new OptionListener());
+            add(options[i]);
+        }
+
+        feedbackLabel.setPreferredSize(new Dimension(450, 30));
+        add(feedbackLabel);
+
+        loadLevel();
+        setVisible(true);
+    }
+
+    private void loadLevel() {
+        if (level > 10) {
+            JOptionPane.showMessageDialog(this, "🎉 You completed all levels!");
+            System.exit(0);
+        }
+
+        levelLabel.setText("Level " + level + ": " + (isMath ? mathLevels[level - 1] : scienceLevels[level - 1]));
+        feedbackLabel.setText("");
+        generateQuestion();
+    }
+
+    private void generateQuestion() {
+        if (isMath) {
+            generateMath(level);
+        } else {
+            generateScience(level);
+        }
+        generateOptions();
+    }
+
+    private void generateMath(int lvl) {
+        switch (lvl) {
+            case 1 -> { int a=random.nextInt(20)+1, b=random.nextInt(20)+1; questionArea.setText(a+" + "+b+" = ?"); answer=a+b;}
+            case 2 -> { int a=random.nextInt(20)+1, b=random.nextInt(20)+1; questionArea.setText(a+" - "+b+" = ?"); answer=a-b;}
+            case 3 -> { int a=random.nextInt(12)+1, b=random.nextInt(12)+1; questionArea.setText(a+" * "+b+" = ?"); answer=a*b;}
+            case 4 -> { int b=random.nextInt(12)+1, c=random.nextInt(12)+1, a=b*c; questionArea.setText(a+" / "+b+" = ?"); answer=c;}
+            case 5 -> { int a=random.nextInt(41)+10, b=random.nextInt(10)+1; questionArea.setText(a+" * "+b+" + "+b+" = ?"); answer=a*b+b;}
+            case 6 -> { int a=random.nextInt(20)+1, b=random.nextInt(10)+1; questionArea.setText("("+a+" + "+b+")^2 = ?"); answer=Math.pow(a+b,2);}
+            case 7 -> { int a=random.nextInt(50)+10, b=random.nextInt(30)+1; questionArea.setText(a+" + "+b+" = ?"); answer=a+b;}
+            case 8 -> { int a=random.nextInt(12)+1, b=random.nextInt(12)+1; questionArea.setText(a+" * "+b+" = ?"); answer=a*b;}
+            case 9 -> { int b=random.nextInt(15)+1, c=random.nextInt(12)+1, a=b*c; questionArea.setText(a+" / "+b+" = ?"); answer=c;}
+            case 10 -> { int a=random.nextInt(20)+1, b=random.nextInt(10)+1; questionArea.setText(a+"^2 + "+b+" = ?"); answer=Math.pow(a,2)+b;}
+        }
+    }
+
+    private void generateScience(int lvl) {
+        switch (lvl) {
+            case 1 -> { int v=random.nextInt(16)+5, t=random.nextInt(10)+1; questionArea.setText("A car moves at "+v+" m/s for "+t+" s. Distance = ?"); answer=v*t;}
+            case 2 -> { String[] elements={"H","O","C"}; int[] masses={1,16,12}; int idx=random.nextInt(elements.length); int count=random.nextInt(5)+1; questionArea.setText("Atomic mass of "+count+elements[idx]+" = ?"); answer=masses[idx]*count;}
+            case 3 -> { long c=300_000_000; int t=random.nextInt(10)+1; questionArea.setText("Light travels for "+t+" seconds. Distance = ?"); answer=c*t;}
+            case 4 -> { int F=random.nextInt(46)+5, m=random.nextInt(10)+1; questionArea.setText("Force = "+F+" N, Mass = "+m+" kg. Acceleration = ?"); answer=(double)F/m;}
+            case 5 -> { int v=random.nextInt(20)+5, t=random.nextInt(10)+1; questionArea.setText("Physics level 5 question, v="+v+", t="+t); answer=v*t;}
+            case 6 -> { int a=random.nextInt(5)+1, b=random.nextInt(10)+1; questionArea.setText("Chemistry level 6, something = ?"); answer=a*b;}
+            case 7 -> { int v=random.nextInt(15)+5, t=random.nextInt(10)+1; questionArea.setText("Physics level 7, v="+v+", t="+t); answer=v*t;}
+            case 8 -> { int a=random.nextInt(10)+1, b=random.nextInt(10)+1; questionArea.setText("Science level 8, a="+a+", b="+b); answer=a+b;}
+            case 9 -> { int F=random.nextInt(50)+5, m=random.nextInt(10)+1; questionArea.setText("Advanced physics, F="+F+", m="+m); answer=(double)F/m;}
+            case 10 -> { int a=random.nextInt(20)+1, b=random.nextInt(10)+1; questionArea.setText("Science challenge, a^2 + b = ?"); answer=Math.pow(a,2)+b;}
+        }
+    }
+
+    private void generateOptions() {
+        int correctIndex = random.nextInt(4);
+        HashSet<Double> used = new HashSet<>();
+        used.add(answer);
+
+        for (int i = 0; i < 4; i++) {
+            if (i == correctIndex) {
+                options[i].setText(String.format("%.2f", answer));
+            } else {
+                double wrong;
+                do {
+                    wrong = answer + random.nextInt(21) - 10;
+                } while (used.contains(wrong));
+                used.add(wrong);
+                options[i].setText(String.format("%.2f", wrong));
+            }
+            options[i].setEnabled(true); // enable buttons
+        }
+    }
+
+    private class OptionListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            JButton clicked = (JButton)e.getSource();
+            double selected = Double.parseDouble(clicked.getText());
+            if (Math.abs(selected - answer) < 0.01) {
+                feedbackLabel.setForeground(Color.GREEN);
+                feedbackLabel.setText("✅ Correct!");
+            } else {
+                feedbackLabel.setForeground(Color.RED);
+                feedbackLabel.setText("❌ Wrong! Correct: " + String.format("%.2f", answer));
+            }
+
+            // disable buttons temporarily
+            for (JButton btn : options) btn.setEnabled(false);
+
+            // load next level after 1s
+            Timer timer = new Timer(1000, ev -> {
+                level++;
+                loadLevel();
+            });
+            timer.setRepeats(false);
+            timer.start();
+        }
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(Game02::new);
+    }
+}
