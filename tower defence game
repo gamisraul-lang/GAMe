@@ -1,0 +1,255 @@
+package com.mycompany.towerdefence;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+
+// Enemy class
+class Enemy {
+    int x, y, health, speed;
+
+    public Enemy(int x, int y, int health, int speed) {
+        this.x = x;
+        this.y = y;
+        this.health = health;
+        this.speed = speed;
+    }
+
+    public void move() {
+        x += speed;
+    }
+
+    public boolean isDead() {
+        return health <= 0;
+    }
+}
+
+// Tower class with type and upgrades
+class Tower {
+    int x, y, range, damage, level;
+    String type; // "Arrow" or "Cannon"
+
+    public Tower(int x, int y, String type) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.level = 1;
+        if (type.equals("Arrow")) {
+            this.range = 100;
+            this.damage = 5;
+        } else if (type.equals("Cannon")) {
+            this.range = 120;
+            this.damage = 8;
+        }
+    }
+
+    // Upgrade tower
+    public void upgrade() {
+        level++;
+        damage += 3;
+        range += 10;
+    }
+
+    public void attack(ArrayList<Enemy> enemies) {
+        for (Enemy e : enemies) {
+            int distance = Math.abs(e.x - x) + Math.abs(e.y - y);
+            if (distance <= range) {
+                e.health -= damage;
+                break; // attack one enemy per tick
+            }
+        }
+    }
+}
+
+// Game panel
+class GamePanel extends JPanel implements ActionListener, MouseListener {
+    ArrayList<Enemy> enemies = new ArrayList<>();
+    ArrayList<Tower> towers = new ArrayList<>();
+    Timer timer = new Timer(100, this);
+    int wave = 1;
+    int money = 100;
+    int lives = 10;
+
+    int totalScore = 0; // cumulative score across games
+    boolean gameOver = false;
+    boolean gameWin = false;
+
+    String selectedTowerType = "Arrow"; // default tower type
+
+    public GamePanel() {
+        this.setPreferredSize(new Dimension(800, 600));
+        this.setBackground(Color.WHITE);
+        this.addMouseListener(this);
+        startWave();
+        timer.start();
+    }
+
+    private void startWave() {
+        for (int i = 0; i < wave + 2; i++) {
+            enemies.add(new Enemy(0, 100 + i * 30, 10 + wave * 2, 5));
+        }
+    }
+
+    private void resetGame() {
+        wave = 1;
+        money = 100;
+        lives = 10;
+        enemies.clear();
+        towers.clear();
+        gameOver = false;
+        gameWin = false;
+        startWave();
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        if (gameOver || gameWin) {
+            // Delay 2 seconds then restart
+            new Timer(2000, ev -> resetGame()).start();
+            gameOver = false; // prevent multiple timers
+            gameWin = false;
+            return;
+        }
+
+        // Move enemies
+        Iterator<Enemy> it = enemies.iterator();
+        while (it.hasNext()) {
+            Enemy enemy = it.next();
+            enemy.move();
+            if (enemy.x > getWidth()) {
+                lives--;
+                it.remove();
+            }
+        }
+
+        // Towers attack
+        for (Tower t : towers) {
+            t.attack(enemies);
+        }
+
+        // Remove dead enemies
+        it = enemies.iterator();
+        while (it.hasNext()) {
+            Enemy enemy = it.next();
+            if (enemy.isDead()) {
+                money += 10;
+                totalScore += 10;
+                it.remove();
+            }
+        }
+
+        // Check wave completion
+        if (enemies.isEmpty() && wave < 10) {
+            wave++;
+            startWave();
+        }
+
+        // Check win/lose
+        if (lives <= 0) {
+            gameOver = true;
+        } else if (wave > 10 && enemies.isEmpty()) {
+            gameWin = true;
+        }
+
+        repaint();
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        // Draw path
+        g.setColor(Color.LIGHT_GRAY);
+        g.fillRect(0, 100, getWidth(), 50);
+
+        // Draw enemies
+        g.setColor(Color.RED);
+        for (Enemy e : enemies) {
+            g.fillRect(e.x, e.y, 20, 20);
+        }
+
+        // Draw towers
+        for (Tower t : towers) {
+            if (t.type.equals("Arrow")) g.setColor(Color.BLUE);
+            else if (t.type.equals("Cannon")) g.setColor(Color.ORANGE);
+            g.fillRect(t.x - 15, t.y - 15, 30, 30);
+
+            // Draw level
+            g.setColor(Color.BLACK);
+            g.drawString("L" + t.level, t.x - 10, t.y + 5);
+        }
+
+        // Draw info
+        g.setColor(Color.BLACK);
+        g.drawString("Wave: " + wave + " Money: " + money + " Lives: " + lives, 10, 20);
+        g.drawString("Total Score: " + totalScore, 10, 40);
+        g.drawString("Selected Tower: " + selectedTowerType + " (Press A for Arrow, C for Cannon)", 10, 60);
+
+        if (lives <= 0) {
+            g.setColor(Color.RED);
+            g.setFont(new Font("Arial", Font.BOLD, 50));
+            g.drawString("GAME OVER", 250, 300);
+        }
+
+        if (wave > 10 && enemies.isEmpty()) {
+            g.setColor(Color.GREEN);
+            g.setFont(new Font("Arial", Font.BOLD, 50));
+            g.drawString("YOU WIN!", 250, 300);
+        }
+    }
+
+    @Override
+    public void mouseClicked(MouseEvent e) {
+        // Place tower
+        if (money >= 50) {
+            towers.add(new Tower(e.getX(), e.getY(), selectedTowerType));
+            money -= 50;
+        }
+    }
+
+    // Keyboard input to change tower type
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        this.requestFocus();
+        this.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyChar() == 'a' || e.getKeyChar() == 'A') selectedTowerType = "Arrow";
+                if (e.getKeyChar() == 'c' || e.getKeyChar() == 'C') selectedTowerType = "Cannon";
+                // Upgrade tower on key 'U'
+                if (e.getKeyChar() == 'u' || e.getKeyChar() == 'U') {
+                    if (!towers.isEmpty()) {
+                        Tower t = towers.get(towers.size() - 1);
+                        if (money >= 30) {
+                            t.upgrade();
+                            money -= 30;
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Unused mouse methods
+    public void mousePressed(MouseEvent e) {}
+    public void mouseReleased(MouseEvent e) {}
+    public void mouseEntered(MouseEvent e) {}
+    public void mouseExited(MouseEvent e) {}
+}
+
+// Main class
+public class TowerDefenseGame {
+    public static void main(String[] args) {
+        JFrame frame = new JFrame("Tower Defense Game");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setResizable(false);
+        GamePanel panel = new GamePanel();
+        frame.add(panel);
+        frame.pack();
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
+    }
+}
