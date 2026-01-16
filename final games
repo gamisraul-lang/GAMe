@@ -1,0 +1,316 @@
+package test;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+public class Test extends JPanel implements ActionListener, KeyListener {
+
+    // Game Stats
+    private int currentLevel = 1;
+    private final int MAX_LEVELS = 10;
+    private int health = 3;
+    private int points = 0;
+    private int timeLeft = 60; // 60 seconds per level
+    private int timerCounter = 0;
+
+    // Player
+    private int playerX = 50, playerY = 450;
+    private double velX = 0, velY = 0; 
+    private boolean isJumping = false;
+    
+    // Enemy
+    private double enemyX = 400, enemyY = 400;
+    private double enemySpeed = 1.5;
+
+    // World
+    private int goalX, goalY;
+    private List<Rectangle> platforms = new ArrayList<>();
+    private Color levelColor;
+    private Timer gameTimer;
+    private Random random = new Random();
+
+    public Test() {
+        this.setPreferredSize(new Dimension(1400, 1400)); // Adjusted size for visibility
+        this.setFocusable(true);
+        this.addKeyListener(this);
+        loadLevel(currentLevel);
+        
+        gameTimer = new Timer(16, this);
+        gameTimer.start();
+    }
+
+    private void loadLevel(int level) {
+    platforms.clear();
+    timeLeft = 60; 
+    velY = 0;
+    playerX = 50; 
+    playerY = 400;
+    
+    // Default settings (Reset every level)
+    enemySpeed = 1.0 + (level * 0.2);
+    levelColor = new Color(20 + (Math.min(level * 20, 150)), 30, 60);
+    
+    // Base Starting Platform
+    platforms.add(new Rectangle(0, 500, 150, 20));
+
+    switch(level) {
+        case 1: // "The Steps" - Introduction
+            platforms.add(new Rectangle(250, 400, 100, 20));
+            platforms.add(new Rectangle(450, 300, 100, 20));
+            platforms.add(new Rectangle(650, 200, 150, 20));
+            goalX = 700; goalY = 160;
+            enemyX = 800; enemyY = 100;
+            break;
+
+        case 2: // "The Gap" - High Speed Level
+            enemySpeed += 2.0; // Enemy is much faster here!
+            platforms.add(new Rectangle(300, 500, 80, 20));
+            platforms.add(new Rectangle(600, 500, 80, 20));
+            platforms.add(new Rectangle(850, 400, 120, 20));
+            goalX = 900; goalY = 360;
+            enemyX = 900; enemyY = 500;
+            break;
+
+        case 3: // "The Tower" - Low Gravity (High Jumps)
+            // You can adjust a 'gravity' variable here if you make it a class field
+            platforms.add(new Rectangle(200, 400, 100, 20));
+            platforms.add(new Rectangle(50, 300, 100, 20));
+            platforms.add(new Rectangle(200, 200, 100, 20));
+            platforms.add(new Rectangle(400, 100, 150, 20));
+            goalX = 450; goalY = 60;
+            enemyX = 400; enemyY = 50;
+            break;
+
+        case 4: // "Zig-Zag" - Dark Level
+            levelColor = new Color(20, 20, 20); // Very dark background
+            platforms.add(new Rectangle(300, 450, 60, 20));
+            platforms.add(new Rectangle(100, 350, 60, 20));
+            platforms.add(new Rectangle(300, 250, 60, 20));
+            platforms.add(new Rectangle(500, 350, 60, 20));
+            platforms.add(new Rectangle(700, 450, 100, 20));
+            goalX = 730; goalY = 410;
+            enemyX = 500; enemyY = 300;
+            break;
+
+        case 5: // "The Bridge" - Narrow Path
+            for(int i = 0; i < 4; i++) {
+                platforms.add(new Rectangle(200 + (i * 200), 500 - (i * 20), 100, 20));
+            }
+            goalX = 850; goalY = 400;
+            enemyX = 800; enemyY = 450;
+            break;
+
+        case 6: // "Floating Isles" - Tiny Platforms
+            platforms.add(new Rectangle(300, 300, 50, 20));
+            platforms.add(new Rectangle(500, 500, 50, 20));
+            platforms.add(new Rectangle(700, 300, 50, 20));
+            platforms.add(new Rectangle(900, 150, 80, 20));
+            goalX = 920; goalY = 110;
+            enemyX = 100; enemyY = 100;
+            break;
+
+        case 7: // "The Descent" - Falling Level
+            playerY = 100; // Start at the top!
+            platforms.add(new Rectangle(200, 200, 100, 20));
+            platforms.add(new Rectangle(400, 350, 100, 20));
+            platforms.add(new Rectangle(600, 500, 100, 20));
+            platforms.add(new Rectangle(800, 600, 150, 20));
+            goalX = 850; goalY = 560;
+            enemyX = 50; enemyY = 500;
+            break;
+
+        case 8: // "Precision" - Time Trial
+            timeLeft = 30; // Half the usual time!
+            for(int i = 0; i < 6; i++) {
+                platforms.add(new Rectangle(200 + (i * 120), 550 - (i * 50), 40, 15));
+            }
+            goalX = 800; goalY = 260;
+            enemyX = 200; enemyY = 100;
+            break;
+
+        case 9: // "The Attic" - Boss Enemy
+            enemySpeed += 3.0; 
+            platforms.add(new Rectangle(100, 550, 800, 20));
+            platforms.add(new Rectangle(200, 400, 100, 20));
+            platforms.add(new Rectangle(500, 400, 100, 20));
+            platforms.add(new Rectangle(800, 250, 100, 20));
+            goalX = 830; goalY = 210;
+            enemyX = 500; enemyY = 500;
+            break;
+
+        case 10: // "The Final Ascent"
+            levelColor = new Color(100, 0, 0); // Ominous Red
+            platforms.add(new Rectangle(100, 500, 50, 20));
+            platforms.add(new Rectangle(300, 400, 50, 20));
+            platforms.add(new Rectangle(500, 300, 50, 20));
+            platforms.add(new Rectangle(700, 200, 50, 20));
+            platforms.add(new Rectangle(900, 100, 100, 20));
+            goalX = 930; goalY = 60;
+            enemyX = 10; enemyY = 10;
+            break;
+            
+        default: // Win State
+            JOptionPane.showMessageDialog(this, "You beat all levels!");
+            System.exit(0);
+            break;
+    }
+}
+    private void restartGame() {
+        currentLevel = 1;
+        health = 3;
+        points = 0;
+        loadLevel(currentLevel);
+        gameTimer.start();
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        this.setBackground(levelColor);
+        
+        // HUD
+        g.setColor(new Color(0, 0, 0, 150));
+        g.fillRect(0, 0, 1000, 50);
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 16));
+        g.drawString("LEVEL: " + currentLevel, 20, 30);
+        g.drawString("HEALTH: " + health, 150, 30);
+        g.drawString("POINTS: " + points, 300, 30);
+        g.drawString("TIME: " + timeLeft + "s", 450, 30);
+        g.drawString("PRESS 'R' TO RESTART", 750, 30);
+
+        // Draw World
+        g.setColor(Color.LIGHT_GRAY);
+        for (Rectangle rect : platforms) g.fillRect(rect.x, rect.y, rect.width, rect.height);
+
+        g.setColor(Color.YELLOW);
+        g.fillOval(goalX, goalY, 30, 30);
+
+        // Draw Enemy
+        g.setColor(Color.RED);
+        g.fillRect((int)enemyX, (int)enemyY, 30, 30);
+
+        // Draw Player
+        g.setColor(Color.CYAN);
+        g.fillRect(playerX, (int)playerY, 30, 30);
+        
+        if (health <= 0) {
+            g.setColor(new Color(0,0,0,200));
+            g.fillRect(0,0,1000,700);
+            g.setColor(Color.RED);
+            g.drawString("GAME OVER! PRESS R", 400, 350);
+        }
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        if (health <= 0) return;
+if (playerY > 1400) { // Check against the new height
+    health--; 
+    loadLevel(currentLevel); // Restart the random map
+}
+        // Player Movement
+        playerX += velX;
+        playerY += velY;
+        velY += 0.8;
+
+        // Enemy AI (Follow Player)
+        if (enemyX < playerX) enemyX += enemySpeed;
+        else enemyX -= enemySpeed;
+        if (enemyY < playerY) enemyY += enemySpeed;
+        else enemyY -= enemySpeed;
+
+        // Collision: Platforms
+        Rectangle pRect = new Rectangle(playerX, (int)playerY, 30, 30);
+        for (Rectangle rect : platforms) {
+            if (pRect.intersects(rect) && velY > 0 && playerY + 20 < rect.y) {
+                playerY = rect.y - 30;
+                velY = 0;
+                isJumping = false;
+            }
+        }
+
+        // Collision: Enemy
+        Rectangle eRect = new Rectangle((int)enemyX, (int)enemyY, 30, 30);
+        if (pRect.intersects(eRect)) {
+            health--;
+            playerX = 50; playerY = 400; // Knockback to start
+            if (health <= 0) gameTimer.stop();
+        }
+
+        // Timer Logic
+        timerCounter++;
+        if (timerCounter >= 60) { // Approx 1 second
+            timeLeft--;
+            timerCounter = 0;
+            if (timeLeft <= 0) health = 0;
+        }
+
+        if (playerY > 700) { health--; playerX = 50; playerY = 400; }
+
+        checkGoal();
+        repaint();
+    }
+
+    private void checkGoal() {
+        if (new Rectangle(playerX, (int)playerY, 30, 30).intersects(new Rectangle(goalX, goalY, 30, 30))) {
+            gameTimer.stop();
+            askTrivia();
+        }
+    }
+
+    private void askTrivia() {
+        int a = random.nextInt(currentLevel * 5) + 2;
+        int b = random.nextInt(currentLevel * 5) + 2;
+        String input = JOptionPane.showInputDialog(this, "ANSWER: " + a + " + " + b);
+
+        if (input != null && input.equals(String.valueOf(a + b))) {
+            points += (timeLeft * 10); // Bonus points for time left
+            if (currentLevel < MAX_LEVELS) {
+                currentLevel++;
+                loadLevel(currentLevel);
+            } else {
+                JOptionPane.showMessageDialog(this, "YOU WIN! FINAL SCORE: " + points);
+                System.exit(0);
+            }
+        } else {
+            health--;
+            JOptionPane.showMessageDialog(this, "WRONG! -1 HEALTH");
+        }
+        if (health > 0) gameTimer.start();
+        else repaint();
+    }
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+        int code = e.getKeyCode();
+        if (code == KeyEvent.VK_A) velX = -6;
+        if (code == KeyEvent.VK_D) velX = 6;
+        if ((code == KeyEvent.VK_W || code == KeyEvent.VK_SPACE) && !isJumping) {
+            velY = -15; isJumping = true;
+        }
+        if (code == KeyEvent.VK_S) velY += 5;
+        if (code == KeyEvent.VK_R) restartGame();
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+        int code = e.getKeyCode();
+        if (code == KeyEvent.VK_A || code == KeyEvent.VK_D) velX = 0;
+    }
+
+    @Override public void keyTyped(KeyEvent e) {}
+
+    public static void main(String[] args) {
+        JFrame f = new JFrame("Math Runner Pro");
+        f.add(new Test());
+        f.pack();
+        f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        f.setLocationRelativeTo(null);
+        f.setVisible(true);
+    }
+}
